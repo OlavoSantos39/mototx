@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="120" fill="#b7f34a"/>
+<path d="M98 310h37l29-64h81l27 64h31l-42-99h-96l-37 99z" fill="#111827"/>
+<circle cx="157" cy="337" r="44" fill="#111827"/><circle cx="157" cy="337" r="20" fill="#b7f34a"/>
+<circle cx="306" cy="337" r="44" fill="#111827"/><circle cx="306" cy="337" r="20" fill="#b7f34a"/>
+<path d="M208 205h75l30 33h-69z" fill="#111827"/>
+<text x="256" y="155" font-family="Arial,sans-serif" font-weight="900" font-size="82" text-anchor="middle" fill="#111827">TX</text>
+</svg>

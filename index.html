@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Peça uma corrida de moto com o motoTX e compartilhe sua localização pelo WhatsApp.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/motoTX.svg" type="image/svg+xml">
+  <title>motoTX — Chamar mototáxi</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <style>
+    :root { color-scheme: dark; --bg:#0b1220; --panel:#111827; --line:#263244; --text:#f8fafc; --muted:#a8b3c5; --lime:#b7f34a; --green:#25D366; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:linear-gradient(160deg,#172033 0%,var(--bg) 55%); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; min-height:100vh; }
+    main { width:min(100%,680px); margin:auto; padding:22px 16px calc(28px + env(safe-area-inset-bottom)); }
+    header { display:flex; align-items:center; gap:12px; margin:5px 0 20px; }
+    .logo { width:54px; height:54px; border-radius:17px; background:var(--lime); display:grid; place-items:center; color:#111827; font-weight:950; font-size:19px; letter-spacing:-1px; box-shadow:0 8px 25px #b7f34a33; }
+    h1 { margin:0; font-size:28px; letter-spacing:-1px; line-height:1.05; }
+    .tagline { margin:5px 0 0; color:var(--muted); font-size:14px; }
+    .panel { background:#111827eF; border:1px solid var(--line); border-radius:22px; padding:17px; box-shadow:0 18px 45px #0003; }
+    .intro { margin:0 0 14px; font-size:15px; color:#d9e2ef; line-height:1.5; }
+    #map { height:310px; width:100%; border-radius:16px; overflow:hidden; background:#202b3a; border:1px solid #344256; }
+    .status { display:flex; align-items:flex-start; gap:9px; margin:13px 2px 15px; color:var(--muted); font-size:13px; line-height:1.4; }
+    .dot { width:9px; height:9px; flex:0 0 9px; margin-top:4px; border-radius:50%; background:#64748b; }
+    .dot.good { background:var(--lime); box-shadow:0 0 0 4px #b7f34a1c; }
+    button { width:100%; border:0; border-radius:15px; padding:15px 16px; min-height:54px; font-size:16px; font-weight:800; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:10px; }
+    button:disabled { opacity:.55; cursor:wait; }
+    .locate { background:var(--lime); color:#101710; }
+    .send { margin-top:11px; background:var(--green); color:#073b1c; }
+    .small { color:var(--muted); font-size:12px; line-height:1.5; margin:13px 3px 0; }
+    .pin { font-size:19px; }
+    footer { text-align:center; color:#75839a; font-size:12px; margin-top:18px; }
+    a { color:inherit; }
+    @media (max-width:380px) { #map { height:265px; } h1 { font-size:25px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo">TX</div>
+    <div><h1>motoTX</h1><p class="tagline">Seu mototáxi, com praticidade.</p></div>
+  </header>
+
+  <section class="panel">
+    <p class="intro">Toque no botão para marcar sua localização no mapa. Depois, envie o ponto de embarque pelo WhatsApp.</p>
+    <div id="map" aria-label="Mapa para marcar sua localização"></div>
+    <div class="status" aria-live="polite"><span id="statusDot" class="dot"></span><span id="statusText">Sua localização ainda não foi marcada. Ative o GPS e permita o acesso quando solicitado.</span></div>
+    <button id="locateBtn" class="locate"><span class="pin">📍</span> Marcar minha localização</button>
+    <button id="sendBtn" class="send" disabled><span>💬</span> Enviar localização pelo WhatsApp</button>
+    <p class="small">O motoTX só acessa sua localização quando você toca no botão e autoriza o navegador. Confira o ponto no mapa antes de enviar.</p>
+  </section>
+  <footer>motoTX • Atendimento pelo WhatsApp</footer>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(() => {
+  const PHONE = "5586995799484";
+  const statusText = document.getElementById("statusText");
+  const statusDot = document.getElementById("statusDot");
+  const locateBtn = document.getElementById("locateBtn");
+  const sendBtn = document.getElementById("sendBtn");
+  let position = null;
+  let marker = null;
+
+  const map = L.map("map", { zoomControl: true }).setView([-5.0892, -42.8016], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  function setStatus(message, success=false) {
+    statusText.textContent = message;
+    statusDot.classList.toggle("good", success);
+  }
+
+  locateBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      setStatus("Este aparelho/navegador não oferece suporte à localização.");
+      return;
+    }
+    locateBtn.disabled = true;
+    locateBtn.textContent = "Obtendo localização…";
+    setStatus("Buscando sua localização GPS. Aguarde e mantenha o serviço de localização ativado.");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        position = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        const point = [position.lat, position.lng];
+        map.setView(point, 17);
+        if (marker) marker.remove();
+        marker = L.marker(point).addTo(map).bindPopup("Seu ponto de embarque").openPopup();
+        setStatus(`Localização marcada (precisão aproximada: ${Math.round(position.accuracy)} m). Se necessário, ajuste o GPS e marque novamente.`, true);
+        sendBtn.disabled = false;
+        locateBtn.disabled = false;
+        locateBtn.innerHTML = '<span class="pin">📍</span> Atualizar minha localização';
+      },
+      (err) => {
+        const messages = {
+          1: "Permissão negada. Autorize a localização nas configurações do navegador e tente novamente.",
+          2: "Não foi possível determinar sua localização. Verifique se o GPS está ativado.",
+          3: "A localização demorou demais. Tente novamente em um local com melhor sinal."
+        };
+        setStatus(messages[err.code] || "Não foi possível obter sua localização. Tente novamente.");
+        locateBtn.disabled = false;
+        locateBtn.innerHTML = '<span class="pin">📍</span> Tentar novamente';
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+    );
+  });
+
+  sendBtn.addEventListener("click", () => {
+    if (!position) return;
+    const mapUrl = `https://www.google.com/maps?q=${position.lat},${position.lng}`;
+    const message = `Olá! Quero solicitar um mototáxi pelo motoTX.\\n\\n📍 Meu local de embarque: ${mapUrl}\\nLatitude: ${position.lat.toFixed(6)}\\nLongitude: ${position.lng.toFixed(6)}\\n\\nPor favor, confirme o atendimento.`;
+    const whatsappUrl = `https://wa.me/${PHONE}?text=${encodeURIComponent(message)}`;
+    window.location.href = whatsappUrl;
+  });
+
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>

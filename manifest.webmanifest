@@ -1,0 +1,13 @@
+{
+  "name": "motoTX — Chamar mototáxi",
+  "short_name": "motoTX",
+  "description": "Marque sua localização e envie seu ponto de embarque pelo WhatsApp.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#111827",
+  "icons": [
+    {"src":"icons/motoTX.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
